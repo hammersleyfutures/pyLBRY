@@ -62,7 +62,7 @@ src/pylbry/
   client.py        Client: endpoint, pooled session, call(), namespace wiring
   api/
     claims.py      resolve, search, channel enumeration
-    files.py       enqueue download, list, status
+    files.py       enqueue download, query
   archive/
     store.py       SQLite schema and queries
     archiver.py    enqueue pool, poll loop, resume
@@ -71,7 +71,7 @@ src/pylbry/
 
 `Client` is transport only — endpoint, one pooled HTTP session, timeouts, error unwrapping.
 Verbs live in namespaces reached through it: `client.claims.resolve(url)`,
-`client.files.list(...)`. A `Client` carrying every verb becomes a god object; the namespace
+`client.files.query(...)`. A `Client` carrying every verb becomes a god object; the namespace
 split is where `publish.py` slots in later as a sibling, touching nothing that exists.
 
 ### Dependency choices
@@ -148,7 +148,9 @@ the endpoint stays configurable so fronting the daemon later is not a rewrite.
 JSON is recursive and Python 3.14 can say so, which is what makes banning `Any` satisfiable:
 
 ```python
-type JSONValue = str | int | float | bool | None | list[JSONValue] | dict[str, JSONValue]
+type JSONValue = (
+    str | int | float | bool | list[JSONValue] | dict[str, JSONValue] | None
+)
 ```
 
 `Client.call()` returns `JSONValue`; `from_dict` classmethods narrow it. Without this, a
@@ -177,7 +179,7 @@ client.claims.resolve_many(urls)  -> dict[str, Claim | ResolveFailure]
 client.claims.search(**filters)   -> Page[Claim]
 client.claims.iter_channel(channel_id, *, has_source=True) -> Iterator[Claim]
 client.files.download(uri, *, timeout=None) -> FileRef             # enqueue only
-client.files.list(**filters)      -> Page[FileRef]
+client.files.query(**filters)     -> Page[FileRef]
 ```
 
 Single-URL `resolve` raises; batch `resolve_many` never does. Archiving uses the batch form
@@ -259,7 +261,7 @@ the daemon will duplicate work or lose files.
 ### Concurrency and output
 
 One `ThreadPoolExecutor` (default 8 workers) for enqueue calls, plus a single poll thread
-updating progress from `files.list`. All DB writes go through the store behind one lock on a
+updating progress from `files.query`. All DB writes go through the store behind one lock on a
 single connection — SQLite serialises writes regardless, so the lock states that honestly.
 WAL lets the poll loop read while the pool writes.
 
@@ -326,7 +328,7 @@ convention = "google"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --strict-markers --strict-config -n auto --dist loadgroup --cov --cov-report=term-missing --cov-fail-under=100"
+addopts = "-q --strict-markers --strict-config -n auto --dist loadgroup --cov --cov-report=term-missing"
 markers = ["live: requires a running lbrynet daemon"]
 
 [tool.coverage.run]
@@ -415,3 +417,28 @@ Functional tests run locally against a live daemon.
 - Daemon authentication.
 - Any reimplementation of protocol internals — blobs, DHT and wallet stay the daemon's job.
 - Backward-compatibility shims. There is no released version to be compatible with.
+
+## Corrections from planning
+
+Writing the implementation plan surfaced four errors in the original draft of this
+spec. They are corrected above; recorded here so the reasoning is not lost.
+
+1. **`files.list()` renamed to `files.query()`.** Inside a class body, a method named
+   `list` shadows the builtin, so a `list[str]` return annotation on any method of that
+   class resolves to the method. Verified: `ty` rejects it with
+   `invalid-type-form: Invalid subscript of object of type 'def list(...)'`.
+2. **`None` moved to the end of the `JSONValue` union, and the alias wrapped.** Ruff
+   `RUF036` (`none-not-at-end-of-union`) rejects `None` mid-union, and the single-line
+   form exceeds 88 characters.
+3. **`--cov-fail-under=100` removed from `addopts`.** With it there, every single-test
+   TDD run fails the threshold, making incremental development impossible. The gate
+   moves to full-suite invocations: `uv run pytest --cov-fail-under=100`. The 100%
+   requirement is unchanged — only where it is enforced.
+4. **ABOUTME lines must be `#` comments above the module docstring**, not inside it.
+   Inside the docstring they trip ruff `D205` (`missing-blank-line-after-summary`).
+
+**One requirement is deferred rather than corrected.** The retry-with-backoff policy for
+idempotent reads (see Retries and timeouts) has no task in the implementation plan.
+Implementing it now would add a branch that cannot be provoked against a healthy local
+daemon, conflicting with the 100% coverage rule. It should be added when a real failure
+motivates it, at which point that failure becomes the test.
