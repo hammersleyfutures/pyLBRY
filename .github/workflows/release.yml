@@ -21,6 +21,23 @@ jobs:
         with:
           python-version: "3.14"
       - run: uv build
+      # The tag carries no authority over what gets built, so a tag raised
+      # without the version in pyproject.toml would republish the previous
+      # version under a filename PyPI already holds. Naming the wheel the tag
+      # implies proves the two agree before anything is uploaded.
+      - name: Check the tag names the version that was built
+        env:
+          TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          wheel="dist/pylbry-${TAG#v}-py3-none-any.whl"
+          if [ ! -f "$wheel" ]; then
+            echo "Tag $TAG expects $wheel, which uv build did not produce." >&2
+            echo "Set version in pyproject.toml to match the tag. Built:" >&2
+            ls dist >&2
+            exit 1
+          fi
       # Installs the built wheel alone, outside the project, so a file missing
       # from the distribution fails here rather than for the first user.
       - run: uv run --no-project --with dist/*.whl python -c "import pylbry; pylbry.Client"
