@@ -1,0 +1,18 @@
+.vscode/settings.json
+
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+
+# Archive databases written by the CLI when --root defaults to the cwd.
+pylbry.db
+pylbry.db-wal
+pylbry.db-shm
+dist/
+build/
+*.egg-info/
+.env
