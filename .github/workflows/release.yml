@@ -10,6 +10,9 @@ jobs:
   pypi:
     runs-on: ubuntu-latest
     permissions:
+      # A permissions block is exhaustive: anything unlisted is denied, so the
+      # checkout needs its read stated even though it is a default elsewhere.
+      contents: read
       # Mints the short-lived OIDC token that PyPI exchanges for upload rights.
       id-token: write
     steps:
