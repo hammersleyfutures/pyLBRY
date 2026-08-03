@@ -115,6 +115,9 @@ def test_archive_channel_indexes_and_reports(
     assert exit_code == EXIT_OK
     assert "indexed" in out
     assert (tmp_path / "pylbry.db").exists()
+    # State is reported after reconciling, because a get calls an already-held
+    # stream incomplete and transfers continue after it returns.
+    assert "downloads continue in the daemon" in out
 
 
 @pytest.mark.live

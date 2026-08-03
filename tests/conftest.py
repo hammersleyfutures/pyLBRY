@@ -82,14 +82,20 @@ def smallest_claim(client: Client, channel: Claim) -> Claim:
 
 
 @pytest.fixture(scope="session")
-def completed_claim(client: Client, smallest_claim: Claim) -> Claim:
-    """Ensure the daemon holds one fully downloaded claim.
+def completed_claim(client: Client, channel: Claim, smallest_claim: Claim) -> Claim:
+    """Ensure the daemon holds one fully downloaded claim from the channel.
 
     Reconciliation needs a completed download to find. The daemon returns from
     a get once the first blob lands, so completion is polled for.
 
+    A completed download is only reused when its claim still resolves and
+    belongs to the pinned channel. The daemon's completed list spans every
+    channel it holds, and a claim can stop resolving after its file is written,
+    so neither can be assumed.
+
     Args:
         client: Client connected to the daemon under test.
+        channel: The pinned test channel.
         smallest_claim: The smallest claim in the pinned channel.
 
     Returns:
@@ -101,7 +107,8 @@ def completed_claim(client: Client, smallest_claim: Claim) -> Claim:
     already = client.files.query(completed=True, page_size=1).items
     if already:
         found = client.claims.search(claim_id=already[0].claim_id, page_size=1)
-        return found.items[0]
+        if found.items and found.items[0].channel_id == channel.claim_id:
+            return found.items[0]
 
     client.files.download(smallest_claim.permanent_url)
     deadline = time.monotonic() + COMPLETION_TIMEOUT

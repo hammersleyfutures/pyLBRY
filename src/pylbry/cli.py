@@ -108,14 +108,20 @@ def _archive(args: argparse.Namespace, client: Client) -> int:
     workers = getattr(args, "workers", DEFAULT_WORKERS)
     with Archiver(client, args.root, workers=workers, on_event=render) as archiver:
         if args.subcommand == "resume":
-            tally = archiver.resume(limit=args.limit)
+            archiver.resume(limit=args.limit)
         else:
             channel = client.claims.resolve(args.url)
             indexed = archiver.index_channel(channel.claim_id)
             print(f"indexed {indexed} claims")
-            tally = archiver.fetch_pending(limit=args.limit)
-        for state, count in sorted(tally.items()):
+            archiver.fetch_pending(limit=args.limit)
+        # A get reports a stream as incomplete even when the daemon already
+        # holds it in full, and transfers continue after it returns. The
+        # archive's true state therefore comes from reconciling, not from what
+        # enqueueing returned.
+        archiver.reconcile()
+        for state, count in sorted(archiver.counts().items()):
             print(f"{state}: {count}")
+        print("downloads continue in the daemon; run 'archive resume' to update")
     return EXIT_OK
 
 
