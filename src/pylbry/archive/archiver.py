@@ -199,15 +199,19 @@ class Archiver:
                 tally[state] = tally.get(state, 0) + 1
         return tally
 
-    def resume(self) -> dict[DownloadState, int]:
+    def resume(self, limit: int | None = None) -> dict[DownloadState, int]:
         """Reconcile against the daemon, then continue outstanding downloads.
+
+        Args:
+            limit: Maximum number of claims to attempt. Resuming a large
+                channel without one queues every outstanding claim at once.
 
         Returns:
             A count of claims per resulting state.
         """
         self.reconcile()
         self.store.reset_running()
-        return self.fetch_pending()
+        return self.fetch_pending(limit=limit)
 
     def counts(self) -> dict[DownloadState, int]:
         """Report how many claims sit in each state.
