@@ -50,17 +50,26 @@ def channel(client: Client) -> Claim:
 
 @pytest.fixture(scope="session")
 def smallest_claim(client: Client, channel: Claim) -> Claim:
-    """Find the smallest downloadable claim in the pinned channel.
+    """Pick the claim tests download, preferring one already on disk.
 
-    Downloads in tests are real, so the smallest stream keeps them affordable.
+    Downloads here are real and each stream is tens of megabytes, so a claim
+    the daemon already holds is reused before any new transfer is started.
+    Only when the daemon holds nothing from the channel is the smallest stream
+    fetched fresh.
 
     Args:
         client: Client connected to the daemon under test.
         channel: The pinned test channel.
 
     Returns:
-        The claim with the smallest source size.
+        A claim from the pinned channel, already downloaded when possible.
     """
+    held = client.files.query(page_size=1, completed=True).items
+    if held:
+        found = client.claims.search(claim_id=held[0].claim_id, page_size=1)
+        if found.items and found.items[0].channel_id == channel.claim_id:
+            return found.items[0]
+
     page = client.claims.search(
         channel_ids=[channel.claim_id],
         has_source=True,

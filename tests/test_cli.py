@@ -171,3 +171,25 @@ def test_status_lists_each_state_present(
     out = capsys.readouterr().out
     assert "claims: 1" in out
     assert f"{DownloadState.PENDING}: 1" in out
+
+
+def test_root_is_accepted_before_or_after_the_subcommand() -> None:
+    """Shared options work on either side of the subcommand."""
+    before = build_parser().parse_args(["--root", "/tmp/a", "status"])
+    after = build_parser().parse_args(["status", "--root", "/tmp/a"])
+    assert before.root == Path("/tmp/a")
+    assert after.root == Path("/tmp/a")
+
+
+def test_a_subcommand_does_not_clobber_an_earlier_root() -> None:
+    """A root given before the subcommand survives when not repeated after it."""
+    args = build_parser().parse_args(["--root", "/tmp/a", "archive", "resume"])
+    assert args.root == Path("/tmp/a")
+
+
+def test_endpoint_is_accepted_after_the_subcommand() -> None:
+    """The endpoint can be given after the subcommand too."""
+    args = build_parser().parse_args(
+        ["resolve", "lbry://x", "--endpoint", "http://d:1"]
+    )
+    assert args.endpoint == "http://d:1"

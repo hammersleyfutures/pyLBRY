@@ -24,6 +24,19 @@ def build_parser() -> argparse.ArgumentParser:
     Returns:
         A parser covering every pylbry command.
     """
+    # Shared options are accepted on either side of the subcommand. The real
+    # defaults live on the top-level parser; the subparser copies suppress
+    # theirs, so an unused copy cannot overwrite a value given before the
+    # subcommand. Giving the top level suppressed defaults instead and relying
+    # on set_defaults does not work: the subcommand merge clobbers the value.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument(
+        "--endpoint", default=argparse.SUPPRESS, help="lbrynet daemon URL"
+    )
+    common.add_argument(
+        "--root", type=Path, default=argparse.SUPPRESS, help="archive root directory"
+    )
+
     parser = argparse.ArgumentParser(prog="pylbry")
     parser.add_argument(
         "--endpoint", default=DEFAULT_ENDPOINT, help="lbrynet daemon URL"
@@ -33,23 +46,41 @@ def build_parser() -> argparse.ArgumentParser:
     )
     commands = parser.add_subparsers(dest="command")
 
-    archive = commands.add_parser("archive", help="archive claims and media")
+    archive = commands.add_parser(
+        "archive", help="archive claims and media", parents=[common]
+    )
     archive_commands = archive.add_subparsers(dest="subcommand", required=True)
 
-    channel = archive_commands.add_parser("channel", help="archive a whole channel")
+    channel = archive_commands.add_parser(
+        "channel", help="archive a whole channel", parents=[common]
+    )
     channel.add_argument("url", help="channel URL or claim ID")
     channel.add_argument("--workers", type=int, default=DEFAULT_WORKERS)
-    channel.add_argument("--limit", type=int, default=None)
+    channel.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="stop after this many downloads; without it the whole channel "
+        "is fetched, which can be many gigabytes",
+    )
 
     resume = archive_commands.add_parser(
-        "resume", help="continue an interrupted archive"
+        "resume", help="continue an interrupted archive", parents=[common]
     )
     resume.add_argument("--workers", type=int, default=DEFAULT_WORKERS)
-    resume.add_argument("--limit", type=int, default=None)
+    resume.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="stop after this many downloads; without it every outstanding "
+        "claim is fetched",
+    )
 
-    commands.add_parser("status", help="report archive state counts")
+    commands.add_parser("status", help="report archive state counts", parents=[common])
 
-    resolve = commands.add_parser("resolve", help="resolve a single URL")
+    resolve = commands.add_parser(
+        "resolve", help="resolve a single URL", parents=[common]
+    )
     resolve.add_argument("url", help="LBRY URL to resolve")
 
     return parser
