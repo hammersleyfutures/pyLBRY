@@ -7,8 +7,52 @@ authors = [
     { name = "Ben Hammersley", email = "ben@hammersleyfutures.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = ["httpx>=0.28.1,<0.29.0"]
+
+[project.scripts]
+pylbry = "pylbry.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.11.32,<0.12.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+  "ruff>=0.16.1,<0.17.0",
+  "ty>=0.0.65,<0.1.0",
+  "pytest>=9.1.1,<10.0.0",
+  "pytest-cov>=7.1.0,<8.0.0",
+  "pytest-xdist>=3.8.0,<4.0.0",
+]
+
+[tool.ty.environment]
+python-version = "3.14"
+
+[tool.ty.rules]
+all = "error"
+
+[tool.ruff]
+target-version = "py314"
+
+[tool.ruff.lint]
+preview = true
+select = ["E","W","F","I","N","D","UP","B","A","C4","SIM","RUF",
+          "ANN","PYI","PTH","TID","ERA","PL","T20","DOC"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"src/pylbry/cli.py" = ["T20"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --strict-config -n auto --dist loadgroup --cov --cov-report=term-missing"
+markers = ["live: requires a running lbrynet daemon"]
+
+[tool.coverage.run]
+branch = true
+source = ["src/pylbry"]
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "@overload"]

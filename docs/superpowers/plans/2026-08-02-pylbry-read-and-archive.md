@@ -500,7 +500,9 @@ def as_object(value: JSONValue) -> dict[str, JSONValue]:
     """
     if isinstance(value, dict):
         return value
-    raise DaemonInternalError(_NARROWING_CODE, f"expected object, got {type(value).__name__}")
+    raise DaemonInternalError(
+        _NARROWING_CODE, f"expected object, got {type(value).__name__}"
+    )
 
 
 def as_list(value: JSONValue) -> list[JSONValue]:
@@ -517,7 +519,9 @@ def as_list(value: JSONValue) -> list[JSONValue]:
     """
     if isinstance(value, list):
         return value
-    raise DaemonInternalError(_NARROWING_CODE, f"expected list, got {type(value).__name__}")
+    raise DaemonInternalError(
+        _NARROWING_CODE, f"expected list, got {type(value).__name__}"
+    )
 
 
 def as_str(value: JSONValue) -> str:
@@ -534,7 +538,9 @@ def as_str(value: JSONValue) -> str:
     """
     if isinstance(value, str):
         return value
-    raise DaemonInternalError(_NARROWING_CODE, f"expected str, got {type(value).__name__}")
+    raise DaemonInternalError(
+        _NARROWING_CODE, f"expected str, got {type(value).__name__}"
+    )
 
 
 def as_int(value: JSONValue) -> int:
@@ -551,7 +557,9 @@ def as_int(value: JSONValue) -> int:
     """
     if isinstance(value, int) and not isinstance(value, bool):
         return value
-    raise DaemonInternalError(_NARROWING_CODE, f"expected int, got {type(value).__name__}")
+    raise DaemonInternalError(
+        _NARROWING_CODE, f"expected int, got {type(value).__name__}"
+    )
 
 
 def as_bool(value: JSONValue) -> bool:
@@ -568,7 +576,9 @@ def as_bool(value: JSONValue) -> bool:
     """
     if isinstance(value, bool):
         return value
-    raise DaemonInternalError(_NARROWING_CODE, f"expected bool, got {type(value).__name__}")
+    raise DaemonInternalError(
+        _NARROWING_CODE, f"expected bool, got {type(value).__name__}"
+    )
 
 
 def opt_str(value: JSONValue) -> str | None:
@@ -1083,7 +1093,9 @@ Add to `tests/test_client.py`:
 ```python
 def test_claim_parses_real_daemon_output(client: Client) -> None:
     """A claim from a live claim_search parses without error."""
-    result = as_object(client.call("claim_search", {"page_size": 1, "has_source": True}))
+    result = as_object(
+        client.call("claim_search", {"page_size": 1, "has_source": True})
+    )
     items = as_list(result["items"])
     claim = Claim.from_dict(as_object(items[0]))
     assert claim.claim_id
@@ -1248,9 +1260,7 @@ class ClaimsAPI:
             raise OperationFailedError("resolve", resolved.message)
         return resolved
 
-    def resolve_many(
-        self, urls: Sequence[str]
-    ) -> dict[str, Claim | ResolveFailure]:
+    def resolve_many(self, urls: Sequence[str]) -> dict[str, Claim | ResolveFailure]:
         """Resolve several URLs, recording failures rather than raising.
 
         Args:
