@@ -2,6 +2,8 @@
 # ABOUTME: A get returns after the first blob is written, not on completion.
 """Download enqueueing and file listing."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from pylbry.errors import OperationFailedError

@@ -2,8 +2,12 @@
 
 A Python library for reading from and archiving the LBRY network.
 
-Requires a running `lbrynet` daemon. See
+Requires Python 3.12 or later and a running `lbrynet` daemon. See
 `docs/superpowers/specs/2026-08-02-pylbry-design.md` for the design.
+
+## Install
+
+    uv add pylbry
 
 ## Usage
 

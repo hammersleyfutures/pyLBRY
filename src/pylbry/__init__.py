@@ -2,6 +2,8 @@
 # ABOUTME: Re-exports the client, models, archiver and errors.
 """Public API for pyLBRY."""
 
+from __future__ import annotations
+
 from pylbry.archive.archiver import ArchiveEvent, Archiver
 from pylbry.archive.store import DownloadState, Store
 from pylbry.client import Client

@@ -2,6 +2,8 @@
 # ABOUTME: Real Claim objects, no daemon and no mocks.
 """Tests for the paged-search deduplication helper."""
 
+from __future__ import annotations
+
 from pylbry.api.claims import unseen
 from pylbry.models import Claim
 

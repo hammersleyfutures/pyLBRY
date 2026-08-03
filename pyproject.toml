@@ -6,8 +6,27 @@ readme = "README.md"
 authors = [
     { name = "Ben Hammersley", email = "ben@hammersleyfutures.com" }
 ]
-requires-python = ">=3.14"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
 dependencies = ["httpx>=0.28.1,<0.29.0"]
+keywords = ["lbry", "lbrynet", "archiving", "json-rpc"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet",
+    "Topic :: System :: Archiving",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/hammersleyfutures/pyLBRY"
+Source = "https://github.com/hammersleyfutures/pyLBRY"
+Issues = "https://github.com/hammersleyfutures/pyLBRY/issues"
 
 [project.scripts]
 pylbry = "pylbry.cli:main"
@@ -25,19 +44,28 @@ dev = [
   "pytest-xdist>=3.8.0,<4.0.0",
 ]
 
+# Both checkers target the oldest supported interpreter, not the newest. Aimed
+# at the newest they would accept syntax and semantics that `requires-python`
+# promises will run, and 3.12 cannot.
 [tool.ty.environment]
-python-version = "3.14"
+python-version = "3.12"
 
 [tool.ty.rules]
 all = "error"
 
 [tool.ruff]
-target-version = "py314"
+target-version = "py312"
 
 [tool.ruff.lint]
 preview = true
 select = ["E","W","F","I","N","D","UP","B","A","C4","SIM","RUF",
           "ANN","PYI","PTH","TID","ERA","PL","T20","DOC"]
+
+[tool.ruff.lint.isort]
+# 3.14 evaluates annotations lazily and the code relies on it, referring to
+# types before they are defined. Below 3.14 that is a NameError at import, so
+# every module states the behaviour rather than inheriting it.
+required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

@@ -2,6 +2,8 @@
 # ABOUTME: Single connection behind a lock, because SQLite serialises writes.
 """SQLite persistence for archived claims and download state."""
 
+from __future__ import annotations
+
 import json
 import sqlite3
 import threading

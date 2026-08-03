@@ -2,6 +2,8 @@
 # ABOUTME: Separates transport, JSON-RPC and in-result daemon failures.
 """Exception hierarchy for pyLBRY."""
 
+from __future__ import annotations
+
 
 class PyLBRYError(Exception):
     """Base class for every error raised by pyLBRY."""

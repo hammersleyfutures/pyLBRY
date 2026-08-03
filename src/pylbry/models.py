@@ -2,6 +2,8 @@
 # ABOUTME: Narrowing turns untyped daemon JSON into typed values without Any.
 """JSON value type, narrowing helpers and frozen record types."""
 
+from __future__ import annotations
+
 from collections.abc import Mapping
 from dataclasses import dataclass
 

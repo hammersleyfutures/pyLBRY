@@ -2,6 +2,8 @@
 # ABOUTME: Prevents accidental removal or renaming of exported names.
 """Guards the documented public API surface."""
 
+from __future__ import annotations
+
 import pylbry
 
 EXPECTED = {

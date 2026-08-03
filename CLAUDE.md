@@ -113,6 +113,22 @@ Conventions the linters enforce, and the ones they cannot:
   Inside it they trip `D205`.
 - `ty` runs with `all = "error"`. If a rule fights the daemon's untyped JSON, downgrade
   that *named* rule with a justification. Never a blanket relaxation.
+- **`I002` requires `from __future__ import annotations` in every module.** 3.14 evaluates
+  annotations lazily and the code depends on it — `Claim.from_dict` returns `Claim` from
+  inside the class body. Below 3.14 that is a `NameError` at import, which no amount of
+  reading catches because the line looks identical on every version.
+
+## Supported Python
+
+The floor is 3.12, and it means all three of these together: `requires-python`, ruff's
+`target-version` and ty's `python-version`. The checkers point at the **oldest** supported
+interpreter, not the newest, so syntax the floor cannot run fails a gate rather than a
+user's install. CI runs the static gates and an import check across 3.12, 3.13 and 3.14.
+
+Support every CPython that upstream still supports; raise the floor only in a minor
+release. 3.11 is excluded by PEP 695 syntax — `type JSONValue` and `class Page[T]` in
+`models.py` — and reverting those to `TypeAlias` and `Generic` would cost more than the
+version is worth.
 
 ## Working here
 

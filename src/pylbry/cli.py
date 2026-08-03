@@ -2,6 +2,8 @@
 # ABOUTME: The only module permitted to print; rendering lives here alone.
 """Command line shell over the pyLBRY public API."""
 
+from __future__ import annotations
+
 import argparse
 import sys
 from collections.abc import Sequence
