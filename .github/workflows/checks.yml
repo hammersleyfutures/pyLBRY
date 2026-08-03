@@ -4,6 +4,12 @@ on:
   push:
   pull_request:
 
+# Linting and type checking only ever read the checkout. Stated at the top so
+# any job added later starts from the same floor rather than the repository
+# default, which is write.
+permissions:
+  contents: read
+
 jobs:
   static:
     runs-on: ubuntu-latest
