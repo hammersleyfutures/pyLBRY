@@ -134,6 +134,14 @@ Connection errors and 5xx get bounded retry with backoff, **for idempotent reads
 (`resolve`, `claim_search`, `file_list`). `get` is never auto-retried; the archiver owns
 that decision, because retry policy for a dead stream is an archiving question.
 
+The policy is two pure functions in `client.py` — `should_retry(method, attempt,
+max_attempts, error)` and `backoff_delay(attempt)` — with only the loop, the sleep and the
+re-raise left inline. Classification is then unit-testable in both directions with no
+daemon, and the mechanism that remains is fully exercised by a closed port, which refuses
+identically on every attempt. `call()` catches `PyLBRYError` and lets `should_retry`
+decide, so a rejected request takes the same path as an unreachable daemon and no branch
+is unreachable.
+
 **Timeout inversion is the subtlest hazard here.** `get` blocks server-side for up to the
 daemon's `download_timeout` (default 30s). If our HTTP read timeout is lower, we abandon the
 request while the daemon continues downloading, recording a failure for content that
@@ -436,9 +444,3 @@ spec. They are corrected above; recorded here so the reasoning is not lost.
    requirement is unchanged — only where it is enforced.
 4. **ABOUTME lines must be `#` comments above the module docstring**, not inside it.
    Inside the docstring they trip ruff `D205` (`missing-blank-line-after-summary`).
-
-**One requirement is deferred rather than corrected.** The retry-with-backoff policy for
-idempotent reads (see Retries and timeouts) has no task in the implementation plan.
-Implementing it now would add a branch that cannot be provoked against a healthy local
-daemon, conflicting with the 100% coverage rule. It should be added when a real failure
-motivates it, at which point that failure becomes the test.

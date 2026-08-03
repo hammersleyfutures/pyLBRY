@@ -2,9 +2,11 @@
 # ABOUTME: Error branches are provoked by misusing the real daemon.
 """Tests for the JSON-RPC transport against a live lbrynet daemon."""
 
+import time
+
 import pytest
 
-from pylbry.client import Client
+from pylbry.client import BASE_DELAY, MAX_ATTEMPTS, Client, backoff_delay
 from pylbry.errors import (
     DaemonUnavailableError,
     InvalidParamsError,
@@ -31,6 +33,27 @@ def test_unreachable_daemon_raises() -> None:
         pytest.raises(DaemonUnavailableError, match="cannot reach"),
     ):
         dead.call("status")
+
+
+def test_a_read_against_a_closed_port_retries_before_giving_up() -> None:
+    """An idempotent read exhausts its attempts, backing off between them."""
+    expected = sum(backoff_delay(attempt) for attempt in range(1, MAX_ATTEMPTS))
+    with Client("http://127.0.0.1:1") as dead:
+        started = time.monotonic()
+        with pytest.raises(DaemonUnavailableError):
+            dead.call("resolve", {"urls": ["lbry://anything"]})
+        elapsed = time.monotonic() - started
+    assert elapsed >= expected
+
+
+def test_a_download_against_a_closed_port_fails_without_retrying() -> None:
+    """A get raises on the first failure, leaving retry policy to the caller."""
+    with Client("http://127.0.0.1:1") as dead:
+        started = time.monotonic()
+        with pytest.raises(DaemonUnavailableError):
+            dead.call("get", {"uri": "lbry://anything"})
+        elapsed = time.monotonic() - started
+    assert elapsed < BASE_DELAY
 
 
 def test_unknown_method_raises_method_not_found(client: Client) -> None:

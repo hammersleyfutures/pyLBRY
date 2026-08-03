@@ -2,6 +2,7 @@
 # ABOUTME: Owns the endpoint, pooled session, timeouts and error unwrapping.
 """JSON-RPC transport for the lbrynet daemon."""
 
+import time
 from types import TracebackType
 from typing import Self
 
@@ -14,6 +15,7 @@ from pylbry.errors import (
     DaemonUnavailableError,
     InvalidParamsError,
     MethodNotFoundError,
+    PyLBRYError,
     RPCError,
 )
 from pylbry.models import JSONValue, as_int, as_object, as_str
@@ -22,12 +24,58 @@ DEFAULT_ENDPOINT = "http://localhost:5279"
 DEFAULT_TIMEOUT = 10.0
 DEFAULT_DOWNLOAD_TIMEOUT = 60.0
 
+MAX_ATTEMPTS = 3
+BASE_DELAY = 0.25
+MAX_DELAY = 4.0
+
+# Only reads safe to repeat. A get is excluded on purpose: repeating it costs a
+# download_timeout each time, and whether a dead stream is worth another try is
+# an archiving decision, not a transport one.
+RETRYABLE_METHODS = frozenset({"resolve", "claim_search", "file_list"})
+
 _ERROR_CLASSES: dict[int, type[RPCError]] = {
     -32601: MethodNotFoundError,
     -32602: InvalidParamsError,
     -32603: DaemonInternalError,
     -32500: DaemonInternalError,
 }
+
+
+def should_retry(
+    method: str, attempt: int, max_attempts: int, error: Exception
+) -> bool:
+    """Decide whether a failed call is worth attempting again.
+
+    Retryable failures are the ones that say nothing about the request: the
+    daemon was unreachable, or it failed internally and answered 5xx. A daemon
+    that read the request and rejected it will reject it identically next time.
+
+    Args:
+        method: Daemon method that failed.
+        attempt: One-based number of the attempt that just failed.
+        max_attempts: Total attempts allowed for one call.
+        error: Failure raised by that attempt.
+
+    Returns:
+        True if the call should be attempted again.
+    """
+    if method not in RETRYABLE_METHODS:
+        return False
+    if attempt >= max_attempts:
+        return False
+    return isinstance(error, DaemonUnavailableError | DaemonInternalError)
+
+
+def backoff_delay(attempt: int) -> float:
+    """Compute how long to wait before the attempt after this one.
+
+    Args:
+        attempt: One-based number of the attempt that just failed.
+
+    Returns:
+        Seconds to wait, doubling per attempt up to a ceiling.
+    """
+    return min(BASE_DELAY * 2 ** (attempt - 1), MAX_DELAY)
 
 
 class Client:
@@ -63,6 +111,40 @@ class Client:
         timeout: float | None = None,
     ) -> JSONValue:
         """Invoke a daemon method and return its result.
+
+        Idempotent reads are retried with backoff when the daemon is
+        unreachable or fails internally; every other method and every other
+        failure is raised on the first attempt.
+
+        Args:
+            method: Daemon method name.
+            params: Parameters for the method.
+            timeout: Read timeout override in seconds.
+
+        Returns:
+            The decoded ``result`` value from the daemon.
+
+        Raises:
+            PyLBRYError: The last failure, once retries are exhausted or the
+                failure is one we do not retry.
+        """
+        attempt = 1
+        while True:
+            try:
+                return self._attempt(method, params, timeout)
+            except PyLBRYError as error:
+                if not should_retry(method, attempt, MAX_ATTEMPTS, error):
+                    raise
+            time.sleep(backoff_delay(attempt))
+            attempt += 1
+
+    def _attempt(
+        self,
+        method: str,
+        params: dict[str, JSONValue] | None,
+        timeout: float | None,
+    ) -> JSONValue:
+        """Make one HTTP request to the daemon and unwrap its response.
 
         Args:
             method: Daemon method name.
