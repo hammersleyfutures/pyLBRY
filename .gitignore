@@ -12,6 +12,7 @@ __pycache__/
 pylbry.db
 pylbry.db-wal
 pylbry.db-shm
+media/
 dist/
 build/
 *.egg-info/
