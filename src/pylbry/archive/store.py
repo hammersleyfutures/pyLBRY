@@ -5,6 +5,7 @@
 import json
 import sqlite3
 import threading
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -17,6 +18,7 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS claim (
     claim_id      TEXT PRIMARY KEY,
     canonical_url TEXT NOT NULL,
+    permanent_url TEXT NOT NULL,
     channel_id    TEXT,
     channel_name  TEXT,
     name          TEXT NOT NULL,
@@ -63,6 +65,16 @@ class DownloadState(StrEnum):
     UNAVAILABLE = "unavailable"
 
 
+@dataclass(frozen=True, slots=True)
+class ArchiveTarget:
+    """What the archiver needs to fetch one claim's media."""
+
+    claim_id: str
+    permanent_url: str
+    name: str
+    channel_name: str | None
+
+
 def _now() -> str:
     """Return the current UTC time as an ISO 8601 string.
 
@@ -98,15 +110,16 @@ class Store:
         with self._lock, self._db:
             self._db.execute(
                 """
-                INSERT INTO claim (claim_id, canonical_url, channel_id,
-                    channel_name, name, title, sd_hash, media_type, size,
-                    height, timestamp, raw, first_seen, last_seen)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                INSERT INTO claim (claim_id, canonical_url, permanent_url,
+                    channel_id, channel_name, name, title, sd_hash, media_type,
+                    size, height, timestamp, raw, first_seen, last_seen)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 ON CONFLICT(claim_id) DO UPDATE SET last_seen=excluded.last_seen
                 """,
                 (
                     claim.claim_id,
                     claim.canonical_url,
+                    claim.permanent_url,
                     claim.channel_id,
                     claim.channel_name,
                     claim.name,
@@ -245,6 +258,37 @@ class Store:
         if row is None:
             return None
         return None if row[0] is None else str(row[0])
+
+    def target_of(self, claim_id: str) -> ArchiveTarget:
+        """Read what is needed to download one claim's media.
+
+        The permanent URL is read back from the store rather than rebuilt from
+        the claim ID, because the daemon's URL grammar is not reconstructable
+        from an ID alone.
+
+        Args:
+            claim_id: Claim to look up.
+
+        Returns:
+            The download target.
+
+        Raises:
+            KeyError: If the store holds no such claim.
+        """
+        with self._lock:
+            row = self._db.execute(
+                "SELECT claim_id, permanent_url, name, channel_name "
+                "FROM claim WHERE claim_id=?",
+                (claim_id,),
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"no claim in store with id {claim_id}")
+        return ArchiveTarget(
+            claim_id=str(row[0]),
+            permanent_url=str(row[1]),
+            name=str(row[2]),
+            channel_name=None if row[3] is None else str(row[3]),
+        )
 
     def reset_running(self) -> int:
         """Return rows left running by a crashed process to pending.

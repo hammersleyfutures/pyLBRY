@@ -3,12 +3,18 @@
 """Shared pytest fixtures for pyLBRY tests."""
 
 import os
+import time
 from collections.abc import Iterator
 
 import pytest
 
 from pylbry.client import Client
 from pylbry.models import Claim
+
+# A real 14 MB transfer takes minutes on this network, so the completed-download
+# fixture is session scoped and polled rather than repeated per test.
+COMPLETION_TIMEOUT = 600.0
+POLL_INTERVAL = 5.0
 
 DAEMON_URL = os.environ.get("PYLBRY_TEST_DAEMON", "http://localhost:5279")
 
@@ -64,3 +70,36 @@ def smallest_claim(client: Client, channel: Claim) -> Claim:
     )
     candidates = [claim for claim in page.items if claim.size is not None]
     return min(candidates, key=lambda claim: claim.size or 0)
+
+
+@pytest.fixture(scope="session")
+def completed_claim(client: Client, smallest_claim: Claim) -> Claim:
+    """Ensure the daemon holds one fully downloaded claim.
+
+    Reconciliation needs a completed download to find. The daemon returns from
+    a get once the first blob lands, so completion is polled for.
+
+    Args:
+        client: Client connected to the daemon under test.
+        smallest_claim: The smallest claim in the pinned channel.
+
+    Returns:
+        A claim the daemon has downloaded in full.
+
+    Raises:
+        AssertionError: If the download does not complete in time.
+    """
+    already = client.files.query(completed=True, page_size=1).items
+    if already:
+        found = client.claims.search(claim_id=already[0].claim_id, page_size=1)
+        return found.items[0]
+
+    client.files.download(smallest_claim.permanent_url)
+    deadline = time.monotonic() + COMPLETION_TIMEOUT
+    while time.monotonic() < deadline:
+        page = client.files.query(claim_id=smallest_claim.claim_id)
+        if page.items and page.items[0].completed:
+            return smallest_claim
+        time.sleep(POLL_INTERVAL)
+    msg = f"{smallest_claim.claim_id} did not finish downloading in time"
+    raise AssertionError(msg)
