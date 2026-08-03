@@ -7,6 +7,7 @@ from typing import Self
 
 import httpx
 
+from pylbry.api.claims import ClaimsAPI
 from pylbry.errors import (
     DaemonInternalError,
     DaemonUnavailableError,
@@ -50,6 +51,7 @@ class Client:
         self.endpoint = endpoint
         self.download_timeout = download_timeout
         self._http = httpx.Client(base_url=endpoint, timeout=timeout)
+        self.claims = ClaimsAPI(self)
 
     def call(
         self,
