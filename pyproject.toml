@@ -6,8 +6,25 @@ readme = "README.md"
 authors = [
     { name = "Ben Hammersley", email = "ben@hammersleyfutures.com" }
 ]
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.14"
 dependencies = ["httpx>=0.28.1,<0.29.0"]
+keywords = ["lbry", "lbrynet", "archiving", "json-rpc"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet",
+    "Topic :: System :: Archiving",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/hammersleyfutures/pyLBRY"
+Source = "https://github.com/hammersleyfutures/pyLBRY"
+Issues = "https://github.com/hammersleyfutures/pyLBRY/issues"
 
 [project.scripts]
 pylbry = "pylbry.cli:main"
