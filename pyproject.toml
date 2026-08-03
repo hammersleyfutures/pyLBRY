@@ -47,7 +47,9 @@ convention = "google"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --strict-markers --strict-config -n auto --dist loadgroup --cov --cov-report=term-missing"
+# Worker count is capped at 4, not `auto`: the bottleneck is one shared lbrynet
+# daemon, not CPU count, and `auto` spawns one worker per core against it.
+addopts = "-q --strict-markers --strict-config -n 4 --dist loadgroup --cov --cov-report=term-missing"
 markers = ["live: requires a running lbrynet daemon"]
 
 [tool.coverage.run]
