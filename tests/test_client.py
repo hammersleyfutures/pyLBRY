@@ -10,7 +10,7 @@ from pylbry.errors import (
     InvalidParamsError,
     MethodNotFoundError,
 )
-from pylbry.models import as_object
+from pylbry.models import Claim, as_list, as_object
 
 pytestmark = pytest.mark.live
 
@@ -45,3 +45,18 @@ def test_bad_params_raise_invalid_params(client: Client) -> None:
     with pytest.raises(InvalidParamsError) as caught:
         client.call("resolve", {"not_a_real_parameter": "x"})
     assert caught.value.code == INVALID_PARAMS
+
+
+def test_claims_parse_real_daemon_output(client: Client) -> None:
+    """Every claim on a live search page parses, sparse sources included.
+
+    A `has_source` search still returns claims whose source object is empty, so
+    the parser must tolerate both shapes and at least one must carry an sd_hash.
+    """
+    result = as_object(
+        client.call("claim_search", {"page_size": 10, "has_source": True})
+    )
+    claims = [Claim.from_dict(as_object(item)) for item in as_list(result["items"])]
+    assert claims
+    assert all(claim.claim_id for claim in claims)
+    assert any(claim.sd_hash is not None for claim in claims)

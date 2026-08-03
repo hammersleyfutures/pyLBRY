@@ -2,6 +2,9 @@
 # ABOUTME: Narrowing turns untyped daemon JSON into typed values without Any.
 """JSON value type, narrowing helpers and frozen record types."""
 
+from collections.abc import Mapping
+from dataclasses import dataclass
+
 from pylbry.errors import DaemonInternalError
 
 type JSONValue = (
@@ -135,3 +138,119 @@ def opt_int(value: JSONValue) -> int | None:
     if value is None:
         return None
     return as_int(value)
+
+
+@dataclass(frozen=True, slots=True)
+class Claim:
+    """A resolved claim from the LBRY network."""
+
+    claim_id: str
+    name: str
+    canonical_url: str
+    permanent_url: str
+    claim_type: str
+    title: str | None
+    description: str | None
+    channel_id: str | None
+    channel_name: str | None
+    height: int
+    timestamp: int | None
+    sd_hash: str | None
+    media_type: str | None
+    size: int | None
+    duration: int | None
+    raw: Mapping[str, JSONValue]
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, JSONValue]) -> Claim:
+        """Build a claim from a daemon payload.
+
+        The stream size arrives as a string, not a number, so it is parsed
+        rather than narrowed.
+
+        Args:
+            data: A single claim object as returned by the daemon.
+
+        Returns:
+            The parsed claim, retaining the original payload in ``raw``.
+        """
+        value = as_object(data.get("value") or {})
+        source = as_object(value.get("source") or {})
+        video = as_object(value.get("video") or {})
+        channel = as_object(data.get("signing_channel") or {})
+        size = source.get("size")
+        return cls(
+            claim_id=as_str(data["claim_id"]),
+            name=as_str(data["name"]),
+            canonical_url=as_str(data["canonical_url"]),
+            permanent_url=as_str(data["permanent_url"]),
+            claim_type=as_str(data["value_type"]),
+            title=opt_str(value.get("title")),
+            description=opt_str(value.get("description")),
+            channel_id=opt_str(channel.get("claim_id")),
+            channel_name=opt_str(channel.get("name")),
+            height=as_int(data["height"]),
+            timestamp=opt_int(data.get("timestamp")),
+            sd_hash=opt_str(source.get("sd_hash")),
+            media_type=opt_str(source.get("media_type")),
+            size=None if size is None else int(as_str(size)),
+            duration=opt_int(video.get("duration")),
+            raw=data,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class FileRef:
+    """A file the daemon knows about, downloaded or in progress."""
+
+    claim_id: str
+    sd_hash: str
+    file_name: str | None
+    download_path: str | None
+    status: str
+    completed: bool
+    written_bytes: int
+    total_bytes: int | None
+    blobs_completed: int
+    blobs_in_stream: int
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, JSONValue]) -> FileRef:
+        """Build a file reference from a daemon payload.
+
+        Args:
+            data: A single file object as returned by ``file_list``.
+
+        Returns:
+            The parsed file reference.
+        """
+        return cls(
+            claim_id=as_str(data["claim_id"]),
+            sd_hash=as_str(data["sd_hash"]),
+            file_name=opt_str(data.get("file_name")),
+            download_path=opt_str(data.get("download_path")),
+            status=as_str(data["status"]),
+            completed=as_bool(data["completed"]),
+            written_bytes=as_int(data["written_bytes"]),
+            total_bytes=opt_int(data.get("total_bytes")),
+            blobs_completed=as_int(data["blobs_completed"]),
+            blobs_in_stream=as_int(data["blobs_in_stream"]),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class Page[T]:
+    """One page of results from a paginated daemon method."""
+
+    items: list[T]
+    page: int
+    page_size: int
+    total_pages: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class ResolveFailure:
+    """A URL that could not be resolved, recorded rather than raised."""
+
+    url: str
+    message: str

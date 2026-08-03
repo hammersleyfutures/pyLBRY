@@ -6,6 +6,11 @@ import pytest
 
 from pylbry.errors import DaemonInternalError
 from pylbry.models import (
+    Claim,
+    FileRef,
+    JSONValue,
+    Page,
+    ResolveFailure,
     as_bool,
     as_int,
     as_list,
@@ -17,6 +22,11 @@ from pylbry.models import (
 
 TWO = 2
 THREE = 3
+CLAIM_SIZE = 42
+CLAIM_HEIGHT = 1000
+CLAIM_DURATION = 90
+CLAIM_TIMESTAMP = 1600000000
+BLOBS = 2
 
 
 def test_as_object_returns_a_mapping() -> None:
@@ -102,3 +112,89 @@ def test_opt_int_rejects_a_non_integer() -> None:
     """opt_int raises when a present value is not an integer."""
     with pytest.raises(DaemonInternalError, match="expected int"):
         opt_int("2")
+
+
+def test_claim_parses_a_stream_claim() -> None:
+    """Claim.from_dict reads identity, channel and stream fields."""
+    data: dict[str, JSONValue] = {
+        "claim_id": "abc123",
+        "name": "a-video",
+        "canonical_url": "lbry://@chan#a/a-video#b",
+        "permanent_url": "lbry://a-video#abc123",
+        "value_type": "stream",
+        "height": CLAIM_HEIGHT,
+        "timestamp": CLAIM_TIMESTAMP,
+        "signing_channel": {"claim_id": "chan1", "name": "@chan"},
+        "value": {
+            "title": "A Video",
+            "description": "Words",
+            "source": {
+                "sd_hash": "deadbeef",
+                "media_type": "video/mp4",
+                "size": "42",
+            },
+            "video": {"duration": CLAIM_DURATION},
+        },
+    }
+    claim = Claim.from_dict(data)
+    assert claim.claim_id == "abc123"
+    assert claim.channel_id == "chan1"
+    assert claim.channel_name == "@chan"
+    assert claim.sd_hash == "deadbeef"
+    assert claim.media_type == "video/mp4"
+    assert claim.size == CLAIM_SIZE
+    assert claim.duration == CLAIM_DURATION
+    assert claim.raw == data
+
+
+def test_claim_parses_a_claim_without_a_source_or_channel() -> None:
+    """Claim.from_dict tolerates absent channel, source and video sections."""
+    data: dict[str, JSONValue] = {
+        "claim_id": "x",
+        "name": "n",
+        "canonical_url": "lbry://n",
+        "permanent_url": "lbry://n#x",
+        "value_type": "channel",
+        "height": 1,
+        "value": {},
+    }
+    claim = Claim.from_dict(data)
+    assert claim.channel_id is None
+    assert claim.sd_hash is None
+    assert claim.size is None
+    assert claim.duration is None
+    assert claim.timestamp is None
+
+
+def test_file_ref_parses_a_file_entry() -> None:
+    """FileRef.from_dict reads progress and completion fields."""
+    data: dict[str, JSONValue] = {
+        "claim_id": "abc123",
+        "sd_hash": "deadbeef",
+        "file_name": "a-video.mp4",
+        "download_path": "/tmp/a-video.mp4",
+        "status": "finished",
+        "completed": True,
+        "written_bytes": CLAIM_SIZE,
+        "total_bytes": CLAIM_SIZE,
+        "blobs_completed": BLOBS,
+        "blobs_in_stream": BLOBS,
+    }
+    file_ref = FileRef.from_dict(data)
+    assert file_ref.completed is True
+    assert file_ref.written_bytes == CLAIM_SIZE
+    assert file_ref.blobs_in_stream == BLOBS
+
+
+def test_page_holds_items_and_pagination() -> None:
+    """A Page carries its items alongside pagination metadata."""
+    page: Page[str] = Page(items=["a"], page=1, page_size=20, total_pages=None)
+    assert page.items == ["a"]
+    assert page.total_pages is None
+
+
+def test_resolve_failure_records_the_url_and_message() -> None:
+    """A ResolveFailure records which URL failed and why."""
+    failure = ResolveFailure(url="lbry://missing", message="Could not find claim")
+    assert failure.url == "lbry://missing"
+    assert failure.message == "Could not find claim"
