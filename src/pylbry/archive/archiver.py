@@ -2,6 +2,8 @@
 # ABOUTME: Indexes claims first, then fetches media through a bounded pool.
 """Two-phase channel archiving with durable, resumable state."""
 
+from __future__ import annotations
+
 import re
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor

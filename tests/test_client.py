@@ -2,6 +2,8 @@
 # ABOUTME: Error branches are provoked by misusing the real daemon.
 """Tests for the JSON-RPC transport against a live lbrynet daemon."""
 
+from __future__ import annotations
+
 import time
 
 import pytest

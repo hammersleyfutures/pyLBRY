@@ -2,6 +2,8 @@
 # ABOUTME: Verifies codes, messages and subclass relationships.
 """Tests for the pyLBRY exception hierarchy."""
 
+from __future__ import annotations
+
 from pylbry.errors import (
     DaemonInternalError,
     DaemonUnavailableError,

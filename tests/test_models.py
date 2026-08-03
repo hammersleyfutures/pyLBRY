@@ -2,6 +2,8 @@
 # ABOUTME: Covers both the success and failure path of every helper.
 """Tests for JSON narrowing helpers and record types."""
 
+from __future__ import annotations
+
 import pytest
 
 from pylbry.errors import DaemonInternalError

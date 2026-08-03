@@ -2,6 +2,8 @@
 # ABOUTME: Parser tests need no daemon; command tests are marked live.
 """Tests for the pyLBRY command line interface."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 import pytest

@@ -2,6 +2,8 @@
 # ABOUTME: Covers single resolve, batch resolve, search and channel iteration.
 """Tests for the claims namespace against a live lbrynet daemon."""
 
+from __future__ import annotations
+
 import pytest
 
 from pylbry.client import Client

@@ -2,6 +2,8 @@
 # ABOUTME: Downloads mutate daemon state, so they are pinned to one worker.
 """Tests for the files namespace against a live lbrynet daemon."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 import pytest

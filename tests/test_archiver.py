@@ -2,6 +2,8 @@
 # ABOUTME: Downloads mutate daemon state, so the module is pinned to a worker.
 """Tests for the two-phase archiver against a live lbrynet daemon."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 import pytest

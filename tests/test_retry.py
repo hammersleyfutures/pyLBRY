@@ -2,6 +2,8 @@
 # ABOUTME: Real exception objects, no daemon and no mocks.
 """Tests for the retry policy that guards idempotent daemon reads."""
 
+from __future__ import annotations
+
 from pylbry.client import (
     BASE_DELAY,
     MAX_ATTEMPTS,

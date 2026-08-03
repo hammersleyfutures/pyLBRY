@@ -2,6 +2,8 @@
 # ABOUTME: Uses a real database in a temp directory; no daemon required.
 """Tests for the SQLite archive store."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 from pylbry.archive.store import DownloadState, Store

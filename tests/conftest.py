@@ -2,6 +2,8 @@
 # ABOUTME: Provides a live daemon client and a pinned, seeded test channel.
 """Shared pytest fixtures for pyLBRY tests."""
 
+from __future__ import annotations
+
 import os
 import time
 from collections.abc import Iterator

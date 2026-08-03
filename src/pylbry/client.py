@@ -2,6 +2,8 @@
 # ABOUTME: Owns the endpoint, pooled session, timeouts and error unwrapping.
 """JSON-RPC transport for the lbrynet daemon."""
 
+from __future__ import annotations
+
 import time
 from types import TracebackType
 from typing import Self

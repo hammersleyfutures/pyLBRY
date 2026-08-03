@@ -2,6 +2,8 @@
 # ABOUTME: Batch resolve records per-URL failures instead of raising.
 """Claim resolution, search and channel enumeration."""
 
+from __future__ import annotations
+
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING
 
